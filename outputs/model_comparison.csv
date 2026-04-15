@@ -1,0 +1,3 @@
+Dataset,AUC-ROC,Precision,Rappel,F1
+Brut,0.6266,0.1624,0.7137,0.2646
+Nettoye,0.6355,0.1753,0.7722,0.2857
