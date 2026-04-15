@@ -45,7 +45,22 @@ df['global_completeness_valid'] = nan_rate < 0.10
 df['pii_absent'] = ('counterparty_name' not in df.columns) and ('trader_id' not in df.columns)
 
 # Initialisation du contexte Great Expectations v1.0
-context = gx.get_context()
+import os
+os.makedirs("outputs/ge_data_docs", exist_ok=True)
+
+context = gx.get_context(mode="ephemeral")
+context.add_data_docs_site(
+    site_name="trade_site",
+
+    site_config={
+        "class_name": "SiteBuilder",
+        "store_backend": {
+            "class_name": "TupleFilesystemStoreBackend",
+            "base_directory": os.path.abspath("outputs/ge_data_docs"),
+        },
+        "site_index_builder": {"class_name": "DefaultSiteIndexBuilder"},
+    }
+)
 data_source = context.data_sources.add_pandas("pandas_source")
 data_asset = data_source.add_dataframe_asset("trade_asset")
 batch_definition = data_asset.add_batch_definition_whole_dataframe("trade_batch")
@@ -186,3 +201,7 @@ print(f"Score : {passed_count}/{total_count} expectations passées")
 print("=" * 80)
 
 pd.DataFrame(results_list).to_csv('outputs/03_ge_validation_report.csv', index=False)
+
+
+context.build_data_docs()
+
