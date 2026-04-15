@@ -1,0 +1,33 @@
+2026-04-15 15:12:41,631 | INFO | Dataset charge : 8950 lignes, 20 colonnes
+2026-04-15 15:12:41,685 | INFO | [Sentinelles] NaN avant=2501 -> apres=2593 (+92 NaN crees)
+2026-04-15 15:12:41,685 | INFO | [Sentinelles] 8950 -> 8950 lignes
+2026-04-15 15:12:41,697 | INFO | [Doublons] Doublons exacts=200 | Doublons trade_id=200
+2026-04-15 15:12:41,699 | INFO | [Doublons] 8950 -> 8750 lignes
+2026-04-15 15:12:41,714 | INFO | [Types] 8750 -> 8750 lignes
+2026-04-15 15:12:41,716 | INFO | [asset_class] 0 valeurs non mappees -> NaN | valeurs restantes : {'fx': 2258, 'equity': 2254, 'bond': 2130, 'derivative': 2108}
+2026-04-15 15:12:41,716 | INFO | [asset_class] 8750 -> 8750 lignes
+2026-04-15 15:12:41,717 | INFO | [5a settlement] 80 lignes : settlement mis a trade_date+2j (regle T+2 marches actions)
+2026-04-15 15:12:41,718 | INFO | [5b bid/ask] 120 lignes : bid et ask permutes (fourchette physiquement impossible inversee)
+2026-04-15 15:12:41,719 | INFO | [5c mid_price] 320 lignes : mid_price recalcule = (bid+ask)/2 (erreur calcul source Bloomberg)
+2026-04-15 15:12:41,720 | INFO | [5d price] 150 lignes : price hors fourchette -> remplace par mid_price (execution hors marche impossible)
+2026-04-15 15:12:41,720 | INFO | [5e notional] 40 lignes : notionnel negatif -> abs() + flag notional_short_flag=1 (preserve info position short)
+2026-04-15 15:12:41,722 | INFO | [5f rating/defaut] 96 lignes : rating degrade a CCC (AAA/AA/A + defaut = contradiction logique impossible)
+2026-04-15 15:12:41,722 | INFO | [Incoherences financieres] 8750 -> 8750 lignes
+2026-04-15 15:12:41,722 | INFO | [6 country_risk] 6 valeurs invalides -> NaN (Score pays hors [0,100] invalide (échelle Refinitiv))
+2026-04-15 15:12:41,722 | INFO | [6 volatility_30d] 0 valeurs invalides -> NaN (Volatilité négative ou >200% invraisemblable)
+2026-04-15 15:12:41,723 | INFO | [6 default_flag] 0 valeurs invalides -> NaN (Binaire 0/1 uniquement)
+2026-04-15 15:12:41,723 | INFO | [6 quantity] 0 valeurs invalides -> NaN (Quantité négative ou nulle sans sens métier)
+2026-04-15 15:12:41,723 | INFO | [Regles metier] 8750 -> 8750 lignes
+2026-04-15 15:12:42,030 | INFO | [7 IQR] notional_eur: 1018 outliers winsories dans [-5202583.70,8806576.47]
+2026-04-15 15:12:42,031 | INFO | [7 IQR] volatility_30d: 0 outliers winsories dans [-36.03,125.46]
+2026-04-15 15:12:42,032 | INFO | [7 IQR] volume_j: 0 outliers winsories dans [-2586194.38,7590190.62]
+2026-04-15 15:12:42,403 | INFO | [7 IsolationForest] 175 anomalies multivariées flagguees (conservées pour revue Risk Officer)
+2026-04-15 15:12:42,403 | INFO | [Outliers] 8750 -> 8750 lignes
+2026-04-15 15:12:42,405 | INFO | [8 country_risk] 30 NaN (0.3%) -> mediane=38.1000 + flag country_risk_was_missing
+2026-04-15 15:12:42,406 | INFO | [8 volatility_30d] 1199 NaN (13.7%) -> mediane=45.5100 + flag volatility_30d_was_missing
+2026-04-15 15:12:42,407 | INFO | [8 credit_rating] 1311 NaN -> 'nr' (Not Rated) : imputer le mode BBB serait trompeur pour un modele de risque)
+2026-04-15 15:12:42,407 | INFO | [Valeurs manquantes] 8750 -> 8750 lignes
+2026-04-15 15:12:42,414 | INFO | [9 PII] 'counterparty_name' pseudonymise -> 'counterparty_name_hash' (SHA-256+salt). RGPD Art.4(5) : donnée identifiante indirecte)
+2026-04-15 15:12:42,420 | INFO | [9 PII] 'trader_id' pseudonymise -> 'trader_id_hash' (SHA-256+salt). RGPD Art.4(5) : donnée identifiante indirecte)
+2026-04-15 15:12:42,420 | INFO | [Pseudonymisation RGPD] 8750 -> 8750 lignes
+2026-04-15 15:12:42,505 | INFO | Dataset nettoyé et sauvegardé : data/tradecleanse_clean.csv

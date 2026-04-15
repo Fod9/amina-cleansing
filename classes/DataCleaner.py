@@ -129,6 +129,8 @@ class DataCleaner:
         # 5f
         r = rules["5f"]
         bad_rating = self.df['credit_rating'].isin(r["investment_grade_ratings"]) & (self.df['default_flag'] == r["default_flag_value"])
+        self.df["rating_degraded_due_to_default"] = 0
+        self.df.loc[bad_rating, "rating_degraded_due_to_default"] = 1
         self.df.loc[bad_rating, 'credit_rating'] = r["degraded_rating"]
         self.logger.info(f"[5f rating/defaut] {bad_rating.sum()} lignes : rating degrade a {r['degraded_rating'].upper()} (AAA/AA/A + defaut = contradiction logique impossible)")
 
