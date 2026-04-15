@@ -201,7 +201,9 @@ df.loc[bad_notional, 'notional_eur'] = df.loc[bad_notional, 'notional_eur'].abs(
 logger.info(f"[5e notional] {bad_notional.sum()} lignes : notionnel negatif -> abs() + flag notional_short_flag=1 (preserve info position short)")
 
 bad_rating = df['credit_rating'].isin(['aaa', 'aa', 'a']) & (df['default_flag'] == 1)
+df['rating_degraded_due_to_default'] = 0
 df.loc[bad_rating, 'credit_rating'] = 'ccc'
+df.loc[bad_rating, "rating_degraded_due_to_default"] = 1
 logger.info(f"[5f rating/defaut] {bad_rating.sum()} lignes : rating degrade a CCC (AAA/AA/A + defaut = contradiction logique impossible)")
 
 logger.info(f"[Incoherences financieres] {before} -> {len(df)} lignes")
