@@ -1,0 +1,22 @@
+expectation,kwargs,status
+expect_column_values_to_be_unique,"{'batch_id': 'pandas_source-trade_asset', 'column': 'trade_id'}",PASS
+expect_column_values_to_not_be_null,"{'batch_id': 'pandas_source-trade_asset', 'column': 'trade_id'}",PASS
+expect_column_values_to_not_be_null,"{'batch_id': 'pandas_source-trade_asset', 'column': 'counterparty_id'}",PASS
+expect_column_values_to_not_be_null,"{'batch_id': 'pandas_source-trade_asset', 'column': 'isin'}",PASS
+expect_column_values_to_match_regex,"{'batch_id': 'pandas_source-trade_asset', 'column': 'isin', 'regex': '^[A-Z]{2}[A-Z0-9]{10}$'}",PASS
+expect_column_values_to_not_be_null,"{'batch_id': 'pandas_source-trade_asset', 'column': 'trade_date'}",PASS
+expect_column_values_to_not_be_null,"{'batch_id': 'pandas_source-trade_asset', 'column': 'asset_class'}",PASS
+expect_column_values_to_be_in_set,"{'batch_id': 'pandas_source-trade_asset', 'column': 'asset_class', 'value_set': ['equity', 'bond', 'derivative', 'fx']}",PASS
+expect_column_values_to_not_be_null,"{'batch_id': 'pandas_source-trade_asset', 'column': 'price'}",PASS
+expect_column_values_to_not_be_null,"{'batch_id': 'pandas_source-trade_asset', 'column': 'quantity'}",PASS
+expect_column_values_to_not_be_null,"{'batch_id': 'pandas_source-trade_asset', 'column': 'default_flag'}",PASS
+expect_column_pair_values_a_to_be_greater_than_b,"{'batch_id': 'pandas_source-trade_asset', 'column_A': 'settlement_date', 'column_B': 'trade_date', 'or_equal': True}",PASS
+expect_column_pair_values_a_to_be_greater_than_b,"{'batch_id': 'pandas_source-trade_asset', 'column_A': 'ask', 'column_B': 'bid'}",PASS
+expect_column_values_to_be_in_set,"{'batch_id': 'pandas_source-trade_asset', 'column': 'price_valid', 'value_set': [True]}",PASS
+expect_column_values_to_be_in_set,"{'batch_id': 'pandas_source-trade_asset', 'column': 'mid_price_valid', 'value_set': [True]}",PASS
+expect_column_values_to_be_in_set,"{'batch_id': 'pandas_source-trade_asset', 'column': 'rating_valid', 'value_set': [True]}",PASS
+expect_column_values_to_be_between,"{'batch_id': 'pandas_source-trade_asset', 'column': 'notional_eur', 'min_value': 0.0, 'strict_min': True}",PASS
+expect_column_values_to_be_between,"{'batch_id': 'pandas_source-trade_asset', 'column': 'country_risk', 'min_value': 0.0, 'max_value': 100.0}",PASS
+expect_column_values_to_be_between,"{'batch_id': 'pandas_source-trade_asset', 'column': 'volatility_30d', 'min_value': 0.1, 'max_value': 200.0}",PASS
+expect_column_values_to_be_in_set,"{'batch_id': 'pandas_source-trade_asset', 'column': 'global_completeness_valid', 'value_set': [True]}",PASS
+expect_column_values_to_be_in_set,"{'batch_id': 'pandas_source-trade_asset', 'column': 'pii_absent', 'value_set': [True]}",PASS
