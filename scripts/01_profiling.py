@@ -1,8 +1,8 @@
 # ============================================================
 # TRADECLEANSE — NOTEBOOK 01 : Audit & Profiling Initial
 # DCLE821 — QuantAxis Capital
-# Etudiant(s) : ___________________________________
-# Date        : ___________________________________
+# Etudiant(s) : Tom DERNONCOURT, Sandra SINI, Melchior DELESCLUSE
+# Date        : 15 Avril 2026
 # ============================================================
 
 import pandas as pd
