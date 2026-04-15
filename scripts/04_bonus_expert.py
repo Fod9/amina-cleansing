@@ -1,7 +1,8 @@
 # ============================================================
 # TRADECLEANSE — NOTEBOOK 04 : Bonus Expert
 # DCLE821 — QuantAxis Capital
-# Etudiant(s) : ___________________________________
+# Etudiant(s) : Tom DERNONCOURT, Melchior DELESCLUSE, Sandra SINI
+# Date        : 15 Avril 2026
 # Date        : ___________________________________
 # ============================================================
 #
