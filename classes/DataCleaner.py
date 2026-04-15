@@ -92,54 +92,61 @@ class DataCleaner:
 
     def fix_financial_coherence(self):
         before = len(self.df)
+        rules = {r["id"]: r for r in self.config["steps"]["financial_coherence"]["rules"]}
 
+        # 5a
+        r = rules["5a"]
         bad_settle = self.df['settlement_date'] < self.df['trade_date']
-        self.df.loc[bad_settle, 'settlement_date'] = self.df.loc[bad_settle, 'trade_date'] + pd.Timedelta(days=2)
-        self.logger.info(f"[5a settlement] {bad_settle.sum()} lignes : settlement mis a trade_date+2j (regle T+2 marches actions)")
+        self.df.loc[bad_settle, 'settlement_date'] = self.df.loc[bad_settle, 'trade_date'] + pd.Timedelta(days=r["t_plus_days"])
+        self.logger.info(f"[5a settlement] {bad_settle.sum()} lignes : settlement mis a trade_date+{r['t_plus_days']}j (regle T+2 marches actions)")
 
+        # 5b
         bad_bid_ask = self.df['bid'] > self.df['ask']
         self.df.loc[bad_bid_ask, ['bid', 'ask']] = self.df.loc[bad_bid_ask, ['ask', 'bid']].values
         self.logger.info(f"[5b bid/ask] {bad_bid_ask.sum()} lignes : bid et ask permutes (fourchette physiquement impossible inversee)")
 
+        # 5c
+        r = rules["5c"]
         mid_calc = (self.df['bid'] + self.df['ask']) / 2
-        bad_mid  = (abs(self.df['mid_price'] - mid_calc) / mid_calc.replace(0, np.nan)) > 0.001
-        self.df.loc[bad_mid, 'mid_price'] = mid_calc[bad_mid].round(6)
+        bad_mid  = (abs(self.df['mid_price'] - mid_calc) / mid_calc.replace(0, np.nan)) > r["tolerance"]
+        self.df.loc[bad_mid, 'mid_price'] = mid_calc[bad_mid].round(r["round_decimals"])
         self.logger.info(f"[5c mid_price] {bad_mid.sum()} lignes : mid_price recalcule = (bid+ask)/2 (erreur calcul source Bloomberg)")
 
-        bad_price = (self.df['price'] < self.df['bid'] * 0.995) | (self.df['price'] > self.df['ask'] * 1.005)
+        # 5d
+        r = rules["5d"]
+        bad_price = (self.df['price'] < self.df['bid'] * r["bid_lower_factor"]) | (self.df['price'] > self.df['ask'] * r["ask_upper_factor"])
         self.df.loc[bad_price, 'price'] = self.df.loc[bad_price, 'mid_price']
         self.logger.info(f"[5d price] {bad_price.sum()} lignes : price hors fourchette -> remplace par mid_price (execution hors marche impossible)")
 
+        # 5e
+        r = rules["5e"]
         bad_notional = self.df['notional_eur'] < 0
-        self.df['notional_short_flag'] = 0
-        self.df.loc[bad_notional, 'notional_short_flag'] = 1
+        self.df[r["flag_column"]] = 0
+        self.df.loc[bad_notional, r["flag_column"]] = 1
         self.df.loc[bad_notional, 'notional_eur'] = self.df.loc[bad_notional, 'notional_eur'].abs()
-        self.logger.info(f"[5e notional] {bad_notional.sum()} lignes : notionnel negatif -> abs() + flag notional_short_flag=1 (preserve info position short)")
+        self.logger.info(f"[5e notional] {bad_notional.sum()} lignes : notionnel negatif -> abs() + flag {r['flag_column']}=1 (preserve info position short)")
 
-        bad_rating = self.df['credit_rating'].isin(['aaa', 'aa', 'a']) & (self.df['default_flag'] == 1)
-        self.df.loc[bad_rating, 'credit_rating'] = 'ccc'
-        self.logger.info(f"[5f rating/defaut] {bad_rating.sum()} lignes : rating degrade a CCC (AAA/AA/A + defaut = contradiction logique impossible)")
+        # 5f
+        r = rules["5f"]
+        bad_rating = self.df['credit_rating'].isin(r["investment_grade_ratings"]) & (self.df['default_flag'] == r["default_flag_value"])
+        self.df.loc[bad_rating, 'credit_rating'] = r["degraded_rating"]
+        self.logger.info(f"[5f rating/defaut] {bad_rating.sum()} lignes : rating degrade a {r['degraded_rating'].upper()} (AAA/AA/A + defaut = contradiction logique impossible)")
 
         self.logger.info(f"[Incoherences financieres] {before} -> {len(self.df)} lignes")
 
     def apply_domain_rules(self):
         before = len(self.df)
 
-        cr_out = (self.df['country_risk'] < 0) | (self.df['country_risk'] > 100)
-        self.df.loc[cr_out, 'country_risk'] = np.nan
-        self.logger.info(f"[6 country_risk] {cr_out.sum()} hors [0,100] -> NaN (score pays ne peut depasser cette plage)")
-
-        vol_out = (self.df['volatility_30d'] <= 0) | (self.df['volatility_30d'] > 200)
-        self.df.loc[vol_out, 'volatility_30d'] = np.nan
-        self.logger.info(f"[6 volatility_30d] {vol_out.sum()} hors [0.1,200] -> NaN (volatilite negative ou >200% invraisemblable)")
-
-        df_flag_invalid = ~self.df['default_flag'].isin([0, 1])
-        self.df.loc[df_flag_invalid, 'default_flag'] = np.nan
-        self.logger.info(f"[6 default_flag] {df_flag_invalid.sum()} valeurs invalides -> NaN (binaire 0/1 uniquement)")
-
-        qty_out = self.df['quantity'] <= 0
-        self.df.loc[qty_out, 'quantity'] = np.nan
-        self.logger.info(f"[6 quantity] {qty_out.sum()} <= 0 -> NaN (quantite negative ou nulle n'a pas de sens metier)")
+        for rule in self.config["steps"]["domain_rules"]["rules"]:
+            col = rule["column"]
+            if "allowed_values" in rule:
+                mask = ~self.df[col].isin(rule["allowed_values"])
+            elif rule.get("exclusive_min"):
+                mask = self.df[col] <= rule["min"]
+            else:
+                mask = (self.df[col] < rule["min"]) | (self.df[col] > rule["max"])
+            self.df.loc[mask, col] = np.nan
+            self.logger.info(f"[6 {col}] {mask.sum()} valeurs invalides -> NaN ({rule['reason']})")
 
         self.logger.info(f"[Regles metier] {before} -> {len(self.df)} lignes")
 
@@ -165,7 +172,8 @@ class DataCleaner:
         for col in outlier_cols:
             q1, q3 = self.df[col].quantile(0.25), self.df[col].quantile(0.75)
             iqr = q3 - q1
-            lower, upper = q1 - 1.5 * iqr, q3 + 1.5 * iqr
+            mult = cfg["iqr"]["multiplier"]
+            lower, upper = q1 - mult * iqr, q3 + mult * iqr
             n_out = ((self.df[col] < lower) | (self.df[col] > upper)).sum()
             self.df[col] = self.df[col].clip(lower=lower, upper=upper)
             self.logger.info(f"[7 IQR] {col}: {n_out} outliers winsories dans [{lower:.2f},{upper:.2f}]")
@@ -232,11 +240,14 @@ class DataCleaner:
         # Imputer BBB introduirait un biais systematique vers le centre de la distribution
         # et masquerait les contreparties les plus risquees du portefeuille.
         # 'nr' (Not Rated) preserve cette distinction semantique pour le modele.
-        n_cr = self.df['credit_rating'].isnull().sum()
-        if n_cr > 0:
-            self.df['credit_rating_was_missing'] = self.df['credit_rating'].isnull().astype(int)
-            self.df['credit_rating'] = self.df['credit_rating'].fillna('nr')
-            self.logger.info(f"[8 credit_rating] {n_cr} NaN -> 'nr' (Not Rated) : imputer le mode BBB serait trompeur pour un modele de risque)")
+        for rule in [r for r in cfg["categorical_imputation"] if r.get("strategy") == "constant"]:
+            col = rule["column"]
+            fill_value = rule["fill_value"]
+            n_nan = self.df[col].isnull().sum()
+            if n_nan > 0:
+                self.df[f'{col}_was_missing'] = self.df[col].isnull().astype(int)
+                self.df[col] = self.df[col].fillna(fill_value)
+                self.logger.info(f"[8 {col}] {n_nan} NaN -> '{fill_value}' (Not Rated) : imputer le mode BBB serait trompeur pour un modele de risque)")
 
         self.logger.info(f"[Valeurs manquantes] {before} -> {len(self.df)} lignes")
 

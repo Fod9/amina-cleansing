@@ -1,0 +1,349 @@
+{
+  "_comment": "TradeCleanse — Pipeline Configuration | DCLE821 — QuantAxis Capital",
+  "_version": "1.0.0",
+  "io": {
+    "input_path": "data/tradecleanse_raw.csv",
+    "output_path": "data/tradecleanse_clean.csv",
+    "log_path": "outputs/tradecleanse_pipeline.log",
+    "read_csv_kwargs": {
+      "low_memory": false
+    }
+  },
+  "steps": {
+    "sentinels": {
+      "enabled": true,
+      "text_sentinels": [
+        "N/A",
+        "#N/A",
+        "#VALUE!",
+        "-",
+        "nd",
+        "null",
+        "NULL",
+        "nan",
+        "NaN",
+        ""
+      ],
+      "numeric_sentinels": [
+        {
+          "column": "country_risk",
+          "values": [
+            "99999",
+            99999
+          ],
+          "reason": "Code 'donnée manquante' Refinitiv — jamais un score valide"
+        },
+        {
+          "column": "volatility_30d",
+          "values": [
+            "0.0",
+            "0",
+            0.0,
+            0
+          ],
+          "reason": "Utilisé comme NaN Bloomberg — volatilité nulle physiquement impossible"
+        }
+      ]
+    },
+    "deduplication": {
+      "enabled": true,
+      "subset": [
+        "trade_id"
+      ],
+      "keep": "last",
+      "reason": "Dans Murex, la dernière occurrence correspond à l'amendement le plus récent — état final fiable"
+    },
+    "type_casting": {
+      "enabled": true,
+      "datetime_columns": [
+        "trade_date",
+        "settlement_date"
+      ],
+      "numeric_columns": [
+        "bid",
+        "ask",
+        "mid_price",
+        "price",
+        "notional_eur",
+        "quantity",
+        "volume_j",
+        "volatility_30d",
+        "country_risk"
+      ],
+      "categorical_columns": [
+        "asset_class",
+        "credit_rating",
+        "sector"
+      ],
+      "errors": "coerce"
+    },
+    "referential_normalization": {
+      "enabled": true,
+      "columns": {
+        "asset_class": {
+          "valid_values": [
+            "equity",
+            "bond",
+            "derivative",
+            "fx"
+          ],
+          "mapping": {
+            "equity": "equity",
+            "equities": "equity",
+            "eq": "equity",
+            "bond": "bond",
+            "fi": "bond",
+            "fixed income": "bond",
+            "derivative": "derivative",
+            "derivatives": "derivative",
+            "deriv": "derivative",
+            "opt": "derivative",
+            "fx": "fx",
+            "forex": "fx",
+            "foreign exchange": "fx"
+          },
+          "unmapped_to_nan": true
+        }
+      }
+    },
+    "financial_coherence": {
+      "enabled": true,
+      "rules": [
+        {
+          "id": "5a",
+          "name": "settlement_before_trade",
+          "columns": [
+            "settlement_date",
+            "trade_date"
+          ],
+          "condition": "settlement_date < trade_date",
+          "action": "set_value",
+          "target_column": "settlement_date",
+          "formula": "trade_date + timedelta(days=2)",
+          "reason": "Le règlement intervient toujours après le trade (T+2)",
+          "t_plus_days": 2
+        },
+        {
+          "id": "5b",
+          "name": "bid_ask_inversion",
+          "columns": [
+            "bid",
+            "ask"
+          ],
+          "condition": "bid > ask",
+          "action": "swap_columns",
+          "reason": "La fourchette est toujours bid < ask — permutation si inversée"
+        },
+        {
+          "id": "5c",
+          "name": "mid_price_incoherent",
+          "columns": [
+            "bid",
+            "ask",
+            "mid_price"
+          ],
+          "condition": "abs(mid_price - (bid+ask)/2) / ((bid+ask)/2) > 0.001",
+          "action": "recalculate",
+          "formula": "(bid + ask) / 2",
+          "target_column": "mid_price",
+          "round_decimals": 6,
+          "reason": "mid = (bid+ask)/2 avec tolérance 1% — erreur de calcul source Bloomberg",
+          "tolerance": 0.001
+        },
+        {
+          "id": "5d",
+          "name": "price_out_of_spread",
+          "columns": [
+            "price",
+            "bid",
+            "ask",
+            "mid_price"
+          ],
+          "condition": "price < bid * 0.995 or price > ask * 1.005",
+          "action": "set_value",
+          "target_column": "price",
+          "formula": "mid_price",
+          "reason": "Prix d'exécution hors fourchette impossible — remplacé par mid_price",
+          "bid_lower_factor": 0.995,
+          "ask_upper_factor": 1.005
+        },
+        {
+          "id": "5e",
+          "name": "negative_notional",
+          "columns": [
+            "notional_eur"
+          ],
+          "condition": "notional_eur < 0",
+          "action": "abs_and_flag",
+          "flag_column": "notional_short_flag",
+          "reason": "Notionnel toujours positif — valeur absolue + flag position short"
+        },
+        {
+          "id": "5f",
+          "name": "investment_grade_default",
+          "columns": [
+            "credit_rating",
+            "default_flag"
+          ],
+          "condition": "credit_rating in ['aaa','aa','a'] and default_flag == 1",
+          "action": "set_value",
+          "target_column": "credit_rating",
+          "formula": "'ccc'",
+          "reason": "AAA/AA/A + défaut = contradiction logique — dégradé à CCC",
+          "investment_grade_ratings": [
+            "aaa",
+            "aa",
+            "a"
+          ],
+          "degraded_rating": "ccc",
+          "default_flag_value": 1
+        }
+      ]
+    },
+    "domain_rules": {
+      "enabled": true,
+      "rules": [
+        {
+          "column": "country_risk",
+          "min": 0,
+          "max": 100,
+          "action": "set_nan",
+          "reason": "Score pays hors [0,100] invalide (échelle Refinitiv)"
+        },
+        {
+          "column": "volatility_30d",
+          "min": 0.1,
+          "max": 200,
+          "action": "set_nan",
+          "reason": "Volatilité négative ou >200% invraisemblable"
+        },
+        {
+          "column": "default_flag",
+          "allowed_values": [
+            0,
+            1
+          ],
+          "action": "set_nan",
+          "reason": "Binaire 0/1 uniquement"
+        },
+        {
+          "column": "quantity",
+          "min": 0,
+          "exclusive_min": true,
+          "action": "set_nan",
+          "reason": "Quantité négative ou nulle sans sens métier"
+        }
+      ]
+    },
+    "outliers": {
+      "enabled": true,
+      "iqr": {
+        "columns": [
+          "notional_eur",
+          "volatility_30d",
+          "volume_j"
+        ],
+        "multiplier": 1.5,
+        "strategy": "winsorize",
+        "reason": "Valeurs extrêmes bornées sans suppression — queues de distribution réelles en finance"
+      },
+      "isolation_forest": {
+        "enabled": true,
+        "features": [
+          "price",
+          "volume_j",
+          "volatility_30d",
+          "notional_eur"
+        ],
+        "flag_column": "is_anomaly_multivariate",
+        "action": "flag_only",
+        "n_estimators": 200,
+        "contamination": 0.02,
+        "random_state": 42,
+        "reason": "Anomalies multivariées conservées pour revue Risk Officer"
+      },
+      "boxplot_output": "outputs/02_boxplots_outliers.png"
+    },
+    "missing_values": {
+      "enabled": true,
+      "drop_if_null": [
+        {
+          "column": "trade_id",
+          "reason": "Trade sans identifiant intraitable — impossible à auditer ou rattacher dans Murex"
+        }
+      ],
+      "deterministic_fill": [
+        {
+          "column": "settlement_date",
+          "formula": "trade_date + timedelta(days=2)",
+          "reason": "T+2 déterministe — imputer la médiane n'aurait aucun sens métier"
+        }
+      ],
+      "numeric_imputation": {
+        "strategy": "median",
+        "add_flag": true,
+        "columns": [
+          "price",
+          "quantity",
+          "bid",
+          "ask",
+          "mid_price",
+          "volume_j",
+          "notional_eur",
+          "country_risk",
+          "volatility_30d"
+        ],
+        "reason": "Médiane préférée à la moyenne — distributions financières asymétriques"
+      },
+      "categorical_imputation": [
+        {
+          "column": "asset_class",
+          "strategy": "mode",
+          "add_flag": true,
+          "reason": "Distribution concentrée — mode acceptable"
+        },
+        {
+          "column": "sector",
+          "strategy": "mode",
+          "add_flag": true,
+          "reason": "Distribution concentrée — mode acceptable"
+        },
+        {
+          "column": "credit_rating",
+          "strategy": "constant",
+          "fill_value": "nr",
+          "add_flag": true,
+          "reason": "Imputer le mode (BBB) masquerait les contreparties sans notation — 'nr' (Not Rated) préserve la sémantique risque"
+        }
+      ]
+    },
+    "pseudonymization": {
+      "enabled": true,
+      "algorithm": "sha256",
+      "salt_env_var": "CLEANSE_SALT",
+      "salt_default": "default_salt_dev",
+      "columns": [
+        {
+          "column": "counterparty_name",
+          "gdpr_basis": "Art.4(1) — identification directe d'une personne morale",
+          "reason": "Pseudonymisation par hachage irréversible — Art.4(5) RGPD"
+        },
+        {
+          "column": "trader_id",
+          "gdpr_basis": "Art.4(1) — identification directe d'une personne physique",
+          "reason": "Pseudonymisation par hachage irréversible — Art.4(5) RGPD"
+        }
+      ]
+    },
+    "quality_report": {
+      "enabled": true,
+      "dqs_weights": {
+        "completeness": 0.6,
+        "uniqueness": 0.4
+      },
+      "uniqueness_subset": [
+        "trade_id"
+      ]
+    }
+  }
+}
