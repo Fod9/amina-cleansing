@@ -1,8 +1,8 @@
 # ============================================================
 # TRADECLEANSE — NOTEBOOK 02 : Pipeline de Nettoyage Complet
 # DCLE821 — QuantAxis Capital
-# Etudiant(s) : ___________________________________
-# Date        : ___________________________________
+# Etudiant(s) : Tom DERNONCOURT, Melchior DELESCLUSE, Sandra SINI
+# Date        : 15 Avril 2026
 # ============================================================
 #
 # CONTRAINTES OBLIGATOIRES :

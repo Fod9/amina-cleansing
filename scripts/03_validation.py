@@ -1,8 +1,8 @@
 # ============================================================
 # TRADECLEANSE — NOTEBOOK 03 : Validation du Dataset Nettoye
 # DCLE821 — QuantAxis Capital
-# Etudiant(s) : ___________________________________
-# Date        : ___________________________________
+# Etudiant(s) : Tom DERNONCOURT, Melchior DELESCLUSE, Sandra SINI
+# Date        : 15 Avril 2026
 # ============================================================
 #
 # CONSIGNE GENERALE :
